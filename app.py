@@ -1,326 +1,384 @@
-
-import streamlit as st
-import pandas as pd
-import random
+from pathlib import Path
 import hashlib
+import inspect
+import random
 
+import pandas as pd
+import streamlit as st
 import ga_algorithm as ga
 
-
-# =====================================================
-# PAGE CONFIGURATION
-# =====================================================
-
 st.set_page_config(
-    page_title="TV Scheduling | GA Optimizer",
+    page_title="TV Scheduling | Dashboard",
     page_icon="📺",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded",
 )
-
-
-# =====================================================
-# MINIMALIST LIGHT THEME
-# =====================================================
 
 st.markdown("""
 <style>
-:root {
-    color-scheme: light;
+:root {color-scheme:light}
+.stApp, [data-testid="stAppViewContainer"] {
+    background:#f6f8fb;
+    color:#172b45;
 }
-
-.stApp {
-    background-color: #F7F9FC;
-    color: #172B4D;
-}
-
+[data-testid="stHeader"] {background:transparent}
 .block-container {
-    max-width: 1250px;
-    padding-top: 2rem;
-    padding-bottom: 4rem;
+    max-width:1200px;
+    padding-top:2.1rem;
+    padding-bottom:3rem;
 }
-
-h1, h2, h3 {
-    color: #172B4D !important;
-    letter-spacing: -0.025em;
+[data-testid="stSidebar"] {
+    background:#fff;
+    border-right:1px solid #e8edf2;
 }
-
+[data-testid="stSidebar"] .block-container {
+    padding-top:2rem;
+}
+h1,h2,h3 {
+    color:#142b46!important;
+    letter-spacing:-.025em;
+}
 h1 {
-    font-size: clamp(1.8rem, 4vw, 2.6rem) !important;
-    font-weight: 750 !important;
+    font-size:2rem!important;
+    font-weight:720!important;
 }
-
-h2, h3 {
-    font-weight: 700 !important;
+h2 {
+    font-size:1.28rem!important;
+    font-weight:680!important;
 }
-
-p {
-    line-height: 1.65;
+h3 {
+    font-size:1.03rem!important;
+    font-weight:650!important;
 }
-
-[data-testid="stHeader"] {
-    background: #F7F9FC;
+p, label, [data-testid="stCaptionContainer"] {
+    color:#53657a;
 }
-
-[data-testid="stVerticalBlockBorderWrapper"] > div {
-    border-color: #E2E8F0 !important;
-    border-radius: 14px !important;
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background:#fff;
+    border-color:#e7ecf1!important;
+    border-radius:13px!important;
 }
-
 [data-testid="stMetric"] {
-    background: #FFFFFF;
-    padding: 1.1rem;
-    border: 1px solid #E2E8F0;
-    border-radius: 12px;
+    background:#fff;
+    border:1px solid #e7ecf1;
+    border-radius:12px;
+    padding:1rem 1.15rem;
 }
-
-[data-testid="stMetricLabel"] {
-    color: #64748B !important;
-}
-
+[data-testid="stMetricLabel"] {color:#65758a}
 [data-testid="stMetricValue"] {
-    color: #172B4D !important;
-    font-weight: 700;
+    color:#17324d;
+    font-size:1.75rem;
 }
-
-.stButton > button[kind="primary"] {
-    background: #167A80 !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 9px !important;
-    padding: 0.65rem 1.5rem !important;
-    font-weight: 650 !important;
+.stButton button[kind="primary"] {
+    background:#167e82!important;
+    color:white!important;
+    border:0!important;
+    border-radius:8px!important;
+    font-weight:600;
 }
-
-.stButton > button[kind="primary"]:hover {
-    background: #11656A !important;
+.stButton button[kind="primary"]:hover {
+    background:#11696d!important;
 }
-
-.stDownloadButton > button {
-    border: 1px solid #CBD5E1 !important;
-    border-radius: 9px !important;
-    color: #172B4D !important;
-    background: white !important;
+.stButton button, .stDownloadButton button {
+    border-radius:8px!important;
 }
-
-[data-testid="stFileUploader"] {
-    background: #FFFFFF;
-    border-radius: 12px;
+[data-testid="stFileUploader"] section {
+    background:#fff;
+    border-color:#d9e2eb;
+    border-radius:10px;
 }
-
-[data-testid="stDataFrame"] {
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-[data-testid="stNumberInput"] input {
-    border-radius: 8px;
-}
-
 [data-testid="stExpander"] {
-    background: #FFFFFF;
-    border-radius: 10px;
+    background:white;
+    border:1px solid #e7ecf1;
+    border-radius:10px;
 }
-
-.section-caption {
-    color: #64748B;
-    font-size: 0.92rem;
-    margin-top: -0.5rem;
-    margin-bottom: 1.2rem;
+[data-testid="stDataFrame"] {
+    border-radius:8px;
+    overflow:hidden;
 }
-
-.hero-tag {
-    display: inline-block;
-    background: #E5F3F2;
-    color: #167A80;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    margin-bottom: 0.7rem;
+[data-testid="stTabs"] button {font-weight:550}
+[data-testid="stAlert"] {border-radius:9px}
+.eyebrow {
+    color:#148084;
+    font-size:.75rem;
+    font-weight:700;
+    letter-spacing:.09em;
+    text-transform:uppercase;
 }
-
-.footer {
-    color: #94A3B8;
-    font-size: 0.8rem;
-    text-align: center;
-    padding-top: 1rem;
+.page-lead {
+    color:#6a7a8b;
+    font-size:.94rem;
+    margin-top:-.6rem;
+    margin-bottom:1.4rem;
 }
-
-@media (max-width: 768px) {
+.section-lead {
+    color:#718094;
+    font-size:.88rem;
+    margin-top:-.45rem;
+    margin-bottom:1rem;
+}
+.brand {
+    font-size:1.25rem;
+    font-weight:750;
+    color:#152d49;
+    letter-spacing:-.04em;
+    margin-bottom:.2rem;
+}
+.brand-sub {
+    font-size:.77rem;
+    color:#8290a1;
+    margin-bottom:1.5rem;
+}
+.sidebar-note {
+    font-size:.8rem;
+    color:#7b8999;
+}
+.small-label {
+    font-size:.76rem;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    color:#8592a1;
+    font-weight:650;
+}
+.footer-note {
+    color:#94a0af;
+    font-size:.78rem;
+    margin-top:2rem;
+}
+@media(max-width:768px) {
     .block-container {
-        padding: 1.2rem 1rem 3rem;
+        padding:1.1rem .85rem 2rem;
     }
-
-    h1 {
-        font-size: 1.8rem !important;
-    }
+    h1 {font-size:1.65rem!important}
 }
 </style>
 """, unsafe_allow_html=True)
 
+HOURS = list(range(6, 24))
+DEFAULT_TRIALS = [
+    (0.80, 0.20),
+    (0.70, 0.01),
+    (0.95, 0.05),
+]
 
-# =====================================================
-# HELPER FUNCTIONS
-# =====================================================
 
-def prepare_ratings(df):
-    """Validate CSV and convert it into GA format."""
+# -----------------------------------------------------
+# DATASET AND GENETIC ALGORITHM HELPERS
+# -----------------------------------------------------
 
+def validate_ratings(df):
     if df.shape[1] != 19:
         raise ValueError(
-            "CSV must contain one program column "
-            "and 18 hourly rating columns."
+            "CSV needs one program-name column and "
+            "18 hourly rating columns (06:00–23:00)."
         )
 
-    programs = df.iloc[:, 0].astype(str).str.strip()
+    names = df.iloc[:, 0].astype("string").str.strip()
 
-    if programs.eq("").any() or programs.duplicated().any():
+    if (
+        names.isna().any()
+        or names.eq("").any()
+        or names.duplicated().any()
+    ):
         raise ValueError(
-            "Program names must be unique and non-empty."
+            "Program names must be non-empty and unique."
         )
 
     numeric = df.iloc[:, 1:].apply(
         pd.to_numeric,
-        errors="raise"
+        errors="raise",
     )
 
-    if numeric.isna().any().any():
-        raise ValueError("Ratings cannot contain empty values.")
-
-    if not numeric.ge(0).all().all() or not numeric.le(1).all().all():
+    if (
+        numeric.isna().any().any()
+        or not numeric.ge(0).all().all()
+        or not numeric.le(1).all().all()
+    ):
         raise ValueError(
-            "All ratings must be between 0 and 1."
+            "All ratings must be numbers between 0 and 1, "
+            "with no blanks."
         )
 
-    return {
-        program: [float(value) for value in row]
-        for program, row in zip(
-            programs,
-            numeric.to_numpy().tolist()
+    return dict(
+        zip(
+            names.tolist(),
+            numeric.astype(float).values.tolist(),
         )
-    }
+    )
 
 
-def schedule_to_dataframe(schedule):
-    """Convert a GA schedule into a TV timetable."""
+def set_ga_ratings(ratings):
+    # Supports the earlier GA module and an updated version.
+    if callable(getattr(ga, "update_ratings", None)):
+        ga.update_ratings(ratings)
+    else:
+        ga.ratings = ratings
+        ga.all_programs = list(ratings)
+        ga.all_time_slots = HOURS.copy()
 
-    rows = []
 
-    for index, program in enumerate(schedule):
-        start_hour = ga.all_time_slots[index]
-        end_hour = (start_hour + 1) % 24
+def timetable(schedule):
+    if len(schedule) != len(HOURS):
+        raise ValueError(
+            f"Expected 18 scheduled hours, got {len(schedule)}."
+        )
 
-        rows.append({
+    return pd.DataFrame([
+        {
             "Time": (
-                f"{start_hour:02d}:00 - "
-                f"{end_hour:02d}:00"
+                f"{hour:02d}:00 – "
+                f"{(hour + 1) % 24:02d}:00"
             ),
-            "TV Program": (
-                program.replace("_", " ").title()
-            ),
+            "TV Program": program.replace("_", " ").title(),
             "Rating": round(
-                ga.ratings[program][index], 3
-            )
-        })
+                float(ga.ratings[program][i]), 3
+            ),
+        }
+        for i, (hour, program)
+        in enumerate(zip(HOURS, schedule))
+    ])
 
-    return pd.DataFrame(rows)
 
-
-def run_experiments(parameters):
-    """Run three GA trials and return their results."""
-
+def execute_trials(parameters):
     results = []
     schedules = {}
 
-    for index, (co_rate, mut_rate) in enumerate(parameters):
-        # Same seed makes comparisons reproducible.
-        random.seed(42)
+    sig = inspect.signature(ga.genetic_algorithm)
+    requires_initial = (
+        "initial_schedule" in sig.parameters
+    )
 
-        schedule = ga.genetic_algorithm(
-            generations=ga.GEN,
-            population_size=ga.POP,
-            crossover_rate=co_rate,
-            mutation_rate=mut_rate,
-            elitism_size=ga.EL_S
+    programs = list(ga.ratings)
+
+    if not programs:
+        raise ValueError(
+            "The ratings dataset has no programs."
         )
 
-        total_rating = ga.fitness_function(schedule)
-        name = f"Experiment {index + 1}"
+    for i, (co, mut) in enumerate(parameters, 1):
+        random.seed(42)
+
+        kwargs = {
+            "generations": ga.GEN,
+            "population_size": ga.POP,
+            "crossover_rate": co,
+            "mutation_rate": mut,
+            "elitism_size": ga.EL_S,
+        }
+
+        if requires_initial:
+            initial = [
+                programs[j % len(programs)]
+                for j in range(len(HOURS))
+            ]
+            random.shuffle(initial)
+
+            candidate = ga.genetic_algorithm(
+                initial,
+                **kwargs,
+            )
+        else:
+            candidate = ga.genetic_algorithm(
+                **kwargs
+            )
+
+        if len(candidate) != len(HOURS):
+            raise ValueError(
+                "GA returned a schedule of the wrong length. "
+                "Check ga_algorithm.py."
+            )
+
+        name = f"Experiment {i}"
+        score = float(ga.fitness_function(candidate))
 
         results.append({
             "Experiment": name,
-            "Crossover Rate": co_rate,
-            "Mutation Rate": mut_rate,
-            "Total Rating": round(total_rating, 3)
+            "Crossover Rate": co,
+            "Mutation Rate": mut,
+            "Total Rating": round(score, 3),
         })
 
-        schedules[name] = schedule_to_dataframe(schedule)
+        schedules[name] = timetable(candidate)
 
-    return results, schedules
+    return pd.DataFrame(results), schedules
 
 
-# =====================================================
-# HEADER
-# =====================================================
+# -----------------------------------------------------
+# SIDEBAR
+# -----------------------------------------------------
 
-st.markdown(
-    '<div class="hero-tag">GENETIC ALGORITHM OPTIMIZER</div>',
-    unsafe_allow_html=True
+with st.sidebar:
+    st.markdown(
+        '<div class="brand">TV Scheduling</div>'
+        '<div class="brand-sub">Genetic Algorithm Optimizer</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="small-label">WORKSPACE</div>',
+        unsafe_allow_html=True,
+    )
+
+    page = st.radio(
+        "Navigation",
+        [
+            "Overview",
+            "Experiment setup",
+            "Results & schedules",
+        ],
+        label_visibility="collapsed",
+    )
+
+    st.divider()
+
+    st.markdown(
+        '<div class="small-label">ALGORITHM SETTINGS</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.caption(f"Generations: {ga.GEN}")
+    st.caption(f"Population size: {ga.POP}")
+    st.caption(f"Elitism size: {ga.EL_S}")
+
+    st.divider()
+
+    st.markdown(
+        '<div class="sidebar-note">'
+        'TV Scheduling Optimization<br>'
+        'Computational Intelligence'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# -----------------------------------------------------
+# LOAD DATASET
+# -----------------------------------------------------
+
+dataset_path = Path(__file__).resolve().parent / (
+    "program_ratings_modified.csv"
 )
 
-st.title("📺 TV Scheduling Dashboard")
-
-st.markdown(
-    """
-    <div class="section-caption">
-        Optimize television program scheduling,
-        configure genetic algorithm parameters,
-        and compare experiment performance.
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-
-# =====================================================
-# DATASET
-# =====================================================
-
-st.subheader("01 / Program Ratings Dataset")
-
-st.markdown(
-    '<div class="section-caption">'
-    'Upload a modified ratings CSV or use the default dataset.'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-uploaded_file = st.file_uploader(
-    "Upload program ratings CSV",
-    type=["csv"],
-    help="The file must contain program names and 18 hourly ratings."
-)
+if "uploaded_csv" not in st.session_state:
+    st.session_state["uploaded_csv"] = None
 
 try:
-    if uploaded_file is not None:
-        ratings_df = pd.read_csv(uploaded_file)
-        dataset_name = uploaded_file.name
+    if st.session_state["uploaded_csv"] is not None:
+        csv_bytes = st.session_state["uploaded_csv"]
+        from io import BytesIO
+        ratings_df = pd.read_csv(BytesIO(csv_bytes))
+        dataset_name = "Uploaded ratings CSV"
     else:
-        ratings_df = pd.read_csv(
-            "program_ratings_modified.csv"
-        )
-        dataset_name = "Default Modified Ratings"
+        ratings_df = pd.read_csv(dataset_path)
+        dataset_name = "Default modified ratings"
 
-    new_ratings = prepare_ratings(ratings_df)
-    ga.update_ratings(new_ratings)
+    active_ratings = validate_ratings(ratings_df)
+    set_ga_ratings(active_ratings)
 
 except Exception as error:
-    st.error(f"Unable to load dataset: {error}")
+    st.error(f"Unable to load ratings: {error}")
     st.stop()
 
-
-# Dataset identifier for detecting changes
 dataset_bytes = ratings_df.to_csv(
     index=False
 ).encode("utf-8")
@@ -330,344 +388,408 @@ dataset_id = hashlib.sha256(
 ).hexdigest()
 
 
-# =====================================================
-# OVERVIEW METRICS
-# =====================================================
+# -----------------------------------------------------
+# OVERVIEW PAGE
+# -----------------------------------------------------
 
-metric1, metric2, metric3 = st.columns(3)
+if page == "Overview":
+    st.markdown(
+        '<div class="eyebrow">Dashboard</div>',
+        unsafe_allow_html=True,
+    )
 
-with metric1:
-    st.metric(
+    st.title("TV Scheduling Overview")
+
+    st.markdown(
+        '<div class="page-lead">'
+        'Manage program ratings and optimize your '
+        'television schedule using a genetic algorithm.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
         "TV Programs",
-        len(ga.all_programs)
+        len(ga.all_programs),
     )
 
-with metric2:
-    st.metric(
-        "Hourly Time Slots",
-        len(ga.all_time_slots)
+    col2.metric(
+        "Time Slots",
+        len(ga.all_time_slots),
     )
 
-with metric3:
-    st.metric(
-        "Configured Experiments",
-        3
+    col3.metric(
+        "Experiments",
+        3,
     )
 
-st.success(f"Active dataset: {dataset_name}")
+    st.write("")
+    st.subheader("Program ratings dataset")
 
-with st.expander("View Program Ratings Dataset"):
-    st.dataframe(
-        ratings_df,
-        hide_index=True,
-        use_container_width=True
+    st.markdown(
+        '<div class="section-lead">'
+        'Upload a modified CSV file or use the '
+        'existing program ratings.'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
-    st.download_button(
-        "Download Active Ratings CSV",
-        data=dataset_bytes,
-        file_name="active_program_ratings.csv",
-        mime="text/csv"
-    )
-
-
-# =====================================================
-# EXPERIMENT CONFIGURATION
-# =====================================================
-
-st.divider()
-
-st.subheader("02 / Experiment Configuration")
-
-st.markdown(
-    '<div class="section-caption">'
-    'Adjust crossover and mutation rates for each experiment.'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-default_parameters = [
-    (0.80, 0.20),
-    (0.70, 0.01),
-    (0.95, 0.05)
-]
-
-experiment_parameters = []
-
-for index, (default_co, default_mut) in enumerate(
-    default_parameters
-):
     with st.container(border=True):
-        st.markdown(
-            f"#### Experiment {index + 1}"
+        st.markdown(f"**Active dataset:** {dataset_name}")
+
+        uploaded_file = st.file_uploader(
+            "Upload ratings CSV",
+            type=["csv"],
+            help=(
+                "CSV must contain one program column "
+                "and 18 hourly rating columns."
+            ),
         )
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            co_rate = st.number_input(
-                "Crossover Rate (CO_R)",
-                min_value=0.00,
-                max_value=0.95,
-                value=default_co,
-                step=0.05,
-                format="%.2f",
-                key=f"co_rate_{index}"
-            )
-
-        with col2:
-            mut_rate = st.number_input(
-                "Mutation Rate (MUT_R)",
-                min_value=0.01,
-                max_value=0.20,
-                value=default_mut,
-                step=0.01,
-                format="%.2f",
-                key=f"mut_rate_{index}"
-            )
-
-        experiment_parameters.append(
-            (co_rate, mut_rate)
-        )
-
-st.caption(
-    "The default mutation rate is 0.20. "
-    "The assignment also specifies trial values "
-    "between 0.01 and 0.05."
-)
-
-
-# =====================================================
-# RUN ALGORITHM
-# =====================================================
-
-st.divider()
-
-st.subheader("03 / Run Optimization")
-
-st.markdown(
-    '<div class="section-caption">'
-    'Execute three genetic algorithm trials '
-    'using the configured parameters.'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-if st.button(
-    "▶ Run Three Experiments",
-    type="primary",
-    use_container_width=True
-):
-    with st.spinner(
-        "Optimizing TV schedules..."
-    ):
-        try:
-            results, schedules = run_experiments(
-                experiment_parameters
-            )
-
-            st.session_state["ga_results"] = results
-            st.session_state["ga_schedules"] = schedules
-            st.session_state["ga_dataset_id"] = dataset_id
-            st.session_state["ga_parameters"] = (
-                experiment_parameters.copy()
-            )
-
-        except Exception as error:
-            st.error(
-                f"Optimization failed: {error}"
-            )
-            st.stop()
-
-
-# =====================================================
-# RESULTS
-# =====================================================
-
-if "ga_results" in st.session_state:
-
-    results_are_current = (
-        st.session_state.get("ga_dataset_id") == dataset_id
-        and st.session_state.get("ga_parameters")
-        == experiment_parameters
-    )
-
-    if not results_are_current:
-        st.warning(
-            "The dataset or parameters have changed. "
-            "Run the experiments again to refresh the results."
-        )
-
-    else:
-        results_df = pd.DataFrame(
-            st.session_state["ga_results"]
-        )
-
-        schedules = st.session_state["ga_schedules"]
-
-        st.divider()
-
-        st.subheader("04 / Experiment Results")
-
-        st.markdown(
-            '<div class="section-caption">'
-            'Compare the fitness scores of all three trials.'
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        best_index = results_df[
-            "Total Rating"
-        ].idxmax()
-
-        best_result = results_df.loc[best_index]
-
-        score1, score2, score3 = st.columns(3)
-
-        for index, column in enumerate(
-            [score1, score2, score3]
-        ):
-            with column:
-                st.metric(
-                    f"Experiment {index + 1}",
-                    f"{results_df.iloc[index]['Total Rating']:.2f}"
-                )
-
-        with st.container(border=True):
-            st.markdown("#### Best Performing Experiment")
-
-            st.markdown(
-                f"**{best_result['Experiment']}** "
-                f"achieved the highest total rating "
-                f"of **{best_result['Total Rating']:.2f}**."
-            )
-
-            st.caption(
-                f"Crossover Rate: "
-                f"{best_result['Crossover Rate']:.2f} | "
-                f"Mutation Rate: "
-                f"{best_result['Mutation Rate']:.2f}"
-            )
+        if uploaded_file is not None:
+            new_bytes = uploaded_file.getvalue()
 
             if (
-                results_df["Total Rating"].eq(
-                    best_result["Total Rating"]
-                ).sum() > 1
+                st.session_state["uploaded_csv"]
+                != new_bytes
             ):
-                st.info(
-                    "Two or more experiments achieved "
-                    "the same highest rating."
-                )
+                st.session_state["uploaded_csv"] = new_bytes
+                st.rerun()
 
-        st.markdown("#### Experiment Comparison")
+        if st.session_state["uploaded_csv"] is not None:
+            if st.button("Use default dataset"):
+                st.session_state["uploaded_csv"] = None
+                st.rerun()
 
+    with st.expander("View program ratings"):
         st.dataframe(
-            results_df,
+            ratings_df,
             hide_index=True,
-            use_container_width=True
-        )
-
-        st.bar_chart(
-            results_df.set_index("Experiment")[
-                "Total Rating"
-            ],
-            color="#167A80"
+            use_container_width=True,
         )
 
         st.download_button(
-            "Download Experiment Comparison",
-            data=results_df.to_csv(index=False),
-            file_name="experiment_comparison.csv",
-            mime="text/csv"
+            "Download ratings CSV",
+            data=dataset_bytes,
+            file_name="active_program_ratings.csv",
+            mime="text/csv",
         )
 
+    st.write("")
+    st.subheader("Getting started")
 
-        # =============================================
-        # TV SCHEDULE TABLES
-        # =============================================
-
-        st.divider()
-
-        st.subheader("05 / TV Programming Schedules")
+    with st.container(border=True):
+        st.markdown(
+            "**1. Review the ratings dataset**"
+        )
+        st.caption(
+            "Check the program ratings used by the algorithm."
+        )
 
         st.markdown(
-            '<div class="section-caption">'
-            'Explore the generated hourly TV timetable '
-            'for each experiment.'
-            '</div>',
-            unsafe_allow_html=True
+            "**2. Configure three experiments**"
+        )
+        st.caption(
+            "Choose crossover and mutation rates."
         )
 
-        tabs = st.tabs([
-            "Experiment 1",
-            "Experiment 2",
-            "Experiment 3"
-        ])
+        st.markdown(
+            "**3. Run and compare schedules**"
+        )
+        st.caption(
+            "Evaluate fitness scores and generated timetables."
+        )
 
-        for index, tab in enumerate(tabs):
-            with tab:
-                name = f"Experiment {index + 1}"
-                schedule_df = schedules[name]
+        if st.button(
+            "Configure experiments",
+            type="primary",
+        ):
+            st.session_state["go_setup"] = True
+            st.rerun()
 
-                co_rate, mut_rate = (
-                    experiment_parameters[index]
+
+# -----------------------------------------------------
+# EXPERIMENT SETUP PAGE
+# -----------------------------------------------------
+
+elif page == "Experiment setup":
+    st.markdown(
+        '<div class="eyebrow">Optimization</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.title("Experiment Setup")
+
+    st.markdown(
+        '<div class="page-lead">'
+        'Set crossover and mutation rates for '
+        'three genetic algorithm trials.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.subheader("Algorithm parameters")
+
+    st.markdown(
+        '<div class="section-lead">'
+        'Each experiment uses the same generations, '
+        'population size, and elitism settings.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    for i, (default_co, default_mut) in enumerate(
+        DEFAULT_TRIALS
+    ):
+        with st.container(border=True):
+            st.markdown(
+                f"### Experiment {i + 1}"
+            )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.number_input(
+                    "Crossover Rate (CO_R)",
+                    min_value=0.00,
+                    max_value=0.95,
+                    value=default_co,
+                    step=0.05,
+                    format="%.2f",
+                    key=f"co_{i}",
                 )
 
-                with st.container(border=True):
-                    st.markdown(
-                        f"#### {name} Schedule"
-                    )
+            with col2:
+                st.number_input(
+                    "Mutation Rate (MUT_R)",
+                    min_value=0.01,
+                    max_value=0.20,
+                    value=default_mut,
+                    step=0.01,
+                    format="%.2f",
+                    key=f"mut_{i}",
+                )
+
+    st.caption(
+        "Default mutation rate: 0.20. "
+        "Additional trial values include 0.01–0.05."
+    )
+
+    st.write("")
+
+    if st.button(
+        "Run three experiments",
+        type="primary",
+        use_container_width=True,
+    ):
+        params = [
+            (
+                st.session_state[f"co_{i}"],
+                st.session_state[f"mut_{i}"],
+            )
+            for i in range(3)
+        ]
+
+        with st.spinner(
+            "Running genetic algorithm experiments..."
+        ):
+            try:
+                results, schedules = execute_trials(params)
+
+                st.session_state["ga_results"] = results
+                st.session_state["ga_schedules"] = schedules
+                st.session_state["ga_run_params"] = params
+                st.session_state["ga_dataset_id"] = dataset_id
+
+                st.success(
+                    "All three experiments completed successfully."
+                )
+
+                st.info(
+                    "Open Results & schedules from the sidebar "
+                    "to view the comparison and timetables."
+                )
+
+            except Exception as error:
+                st.error(
+                    f"Optimization failed: {error}"
+                )
+
+
+# -----------------------------------------------------
+# RESULTS AND SCHEDULES PAGE
+# -----------------------------------------------------
+
+elif page == "Results & schedules":
+    st.markdown(
+        '<div class="eyebrow">Analysis</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.title("Results & Schedules")
+
+    st.markdown(
+        '<div class="page-lead">'
+        'Compare experiment fitness scores and '
+        'review the generated TV timetables.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    if "ga_results" not in st.session_state:
+        st.info(
+            "No experiment results yet. "
+            "Go to Experiment setup and run the three trials."
+        )
+
+    else:
+        current_params = [
+            (
+                st.session_state.get(
+                    f"co_{i}",
+                    DEFAULT_TRIALS[i][0],
+                ),
+                st.session_state.get(
+                    f"mut_{i}",
+                    DEFAULT_TRIALS[i][1],
+                ),
+            )
+            for i in range(3)
+        ]
+
+        is_current = (
+            st.session_state.get("ga_dataset_id")
+            == dataset_id
+            and st.session_state.get("ga_run_params")
+            == current_params
+        )
+
+        if not is_current:
+            st.warning(
+                "The ratings or parameters have changed "
+                "since these results were generated. "
+                "Run the trials again to refresh them."
+            )
+
+        else:
+            results_df = st.session_state["ga_results"]
+            schedules = st.session_state["ga_schedules"]
+
+            best_score = results_df["Total Rating"].max()
+
+            leaders = results_df.loc[
+                results_df["Total Rating"] == best_score,
+                "Experiment",
+            ].tolist()
+
+            st.subheader("Experiment performance")
+
+            col1, col2, col3 = st.columns(3)
+
+            for col, (_, record) in zip(
+                (col1, col2, col3),
+                results_df.iterrows(),
+            ):
+                col.metric(
+                    record["Experiment"],
+                    f'{record["Total Rating"]:.2f}',
+                )
+
+            st.write("")
+
+            with st.container(border=True):
+                st.markdown("**Highest fitness**")
+
+                st.markdown(
+                    f"**{', '.join(leaders)}** · "
+                    f"Total rating **{best_score:.2f}**"
+                )
+
+                st.caption(
+                    "A higher total rating indicates "
+                    "a better schedule under the selected dataset."
+                )
+
+            st.subheader("Fitness comparison")
+
+            st.bar_chart(
+                results_df.set_index("Experiment")[
+                    "Total Rating"
+                ],
+                color="#17878b",
+            )
+
+            st.dataframe(
+                results_df,
+                hide_index=True,
+                use_container_width=True,
+            )
+
+            st.download_button(
+                "Download comparison CSV",
+                data=results_df.to_csv(index=False),
+                file_name="experiment_comparison.csv",
+                mime="text/csv",
+            )
+
+            st.divider()
+
+            st.subheader("TV programming schedules")
+
+            st.markdown(
+                '<div class="section-lead">'
+                'Each table lists the scheduled programs '
+                'from 06:00 through midnight.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+            tabs = st.tabs([
+                "Experiment 1",
+                "Experiment 2",
+                "Experiment 3",
+            ])
+
+            for i, tab in enumerate(tabs):
+                with tab:
+                    name = f"Experiment {i + 1}"
+
+                    co, mut = st.session_state[
+                        "ga_run_params"
+                    ][i]
 
                     st.caption(
-                        f"Crossover: {co_rate:.2f} | "
-                        f"Mutation: {mut_rate:.2f}"
+                        f"Crossover {co:.2f} · "
+                        f"Mutation {mut:.2f}"
                     )
+
+                    schedule_df = schedules[name]
 
                     st.dataframe(
                         schedule_df,
                         hide_index=True,
                         use_container_width=True,
-                        height=500
-                    )
-
-                    total_rating = (
-                        results_df.iloc[index][
-                            "Total Rating"
-                        ]
-                    )
-
-                    st.metric(
-                        "Total Schedule Rating",
-                        f"{total_rating:.2f}"
+                        height=490,
                     )
 
                     st.download_button(
-                        "Download Schedule CSV",
+                        "Download schedule CSV",
                         data=schedule_df.to_csv(
                             index=False
                         ),
                         file_name=(
-                            f"experiment_{index + 1}"
-                            "_schedule.csv"
+                            f"experiment_{i + 1}_schedule.csv"
                         ),
                         mime="text/csv",
-                        key=f"download_schedule_{index}"
+                        key=f"download_{i}",
                     )
 
 
-# =====================================================
-# FOOTER
-# =====================================================
-
-st.divider()
-
 st.markdown(
-    """
-    <div class="footer">
-        TV Scheduling Optimization System
-        <br>
-        Powered by Genetic Algorithm · Streamlit
-    </div>
-    """,
-    unsafe_allow_html=True
+    '<div class="footer-note">'
+    'TV Scheduling Optimization · Genetic Algorithm'
+    '</div>',
+    unsafe_allow_html=True,
 )
