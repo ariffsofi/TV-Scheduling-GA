@@ -6,13 +6,15 @@ import io
 
 import ga_algorithm as ga
 
+
 st.set_page_config(
     page_title="TV Scheduling - Genetic Algorithm",
-    page_icon="📺",
+    page_icon=":material/tv:",
     layout="wide"
 )
 
-st.title("📺 TV Scheduling Using Genetic Algorithm")
+st.title(":material/tv: TV Scheduling Using Genetic Algorithm")
+
 st.write(
     "Optimize TV program scheduling using Genetic Algorithm "
     "and compare three experiments."
